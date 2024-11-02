@@ -25,10 +25,18 @@ def index():
 @app.route('/save_location', methods=['POST'])
 def save_location():
     data = request.get_json()
+
+    try:
+        with open('locations.json', 'r') as f:
+            travelled_locations = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        travelled_locations = []
+
     if data not in travelled_locations:
         travelled_locations.append(data)
         with open('locations.json', 'w') as f:
             json.dump(travelled_locations, f)
+
     return jsonify(success=True)
 
 @app.route('/get_locations', methods=['GET'])
