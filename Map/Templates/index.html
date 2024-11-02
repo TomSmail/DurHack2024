@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+    <script>
+        fetch('/get_locations')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(location => {
+                    L.circle([location.lat, location.lon], {
+                        color: 'grey',
+                        fillColor: '#f03',
+                        fillOpacity: 0.5,
+                        radius: 500
+                    }).addTo(map);
+                });
+            });
+    
+        // Existing geolocation and map code...
+    </script>
+
+    <div id="map" style="height: 500px;"></div>
+    <script>
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(updatePosition, showError);
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+
+        const map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        const marker = L.marker([0, 0]).addTo(map);
+
+        function updatePosition(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            map.setView([lat, lon], 13);
+            marker.setLatLng([lat, lon]);
+
+            fetch('/save_location', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ lat: lat, lon: lon })
+            });
+        }
+
+        function showError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    alert("User denied the request for Geolocation.");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    alert("Location information is unavailable.");
+                    break;
+                case error.TIMEOUT:
+                    alert("The request to get user location timed out.");
+                    break;
+                case error.UNKNOWN_ERROR:
+                    alert("An unknown error occurred.");
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
