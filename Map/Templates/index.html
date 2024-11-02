@@ -3,74 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location Tracker</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <title>Gotta Track 'Em All</title>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.js'></script>
+    <style>
+        #map { height: 500px; }
+        #debug { margin-top: 20px; }
+    </style>
 </head>
 <body>
+    <div id="map"></div>
+    <div id="debug"></div>
     <script>
-        fetch('/get_locations')
-            .then(response => response.json())
-            .then(data => {
-                data.forEach(location => {
-                    L.circle([location.lat, location.lon], {
-                        color: 'grey',
-                        fillColor: '#f03',
-                        fillOpacity: 0.5,
-                        radius: 500
-                    }).addTo(map);
-                });
-            });
-    
-        // Existing geolocation and map code...
-    </script>
+        const mapboxAccessToken = '{{ mapbox_access_token }}';
+        mapboxgl.accessToken = mapboxAccessToken;
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [0, 0],
+            zoom: 17,
+            interactive: false
+        });
 
-    <div id="map" style="height: 500px;"></div>
-    <script>
+        const marker = new mapboxgl.Marker().setLngLat([0, 0]).addTo(map);
+        let exploredLocations = [];
+        let gridData;
+        const gridSize = 0.001; // Grid size in degrees
+
+        // Load explored locations from local storage
+        const storedLocations = localStorage.getItem('exploredLocations');
+        if (storedLocations) {
+            exploredLocations = JSON.parse(storedLocations);
+        }
+
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(updatePosition, showError);
         } else {
             alert("Geolocation is not supported by this browser.");
         }
 
-        const map = L.map('map').setView([0, 0], 2);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        const marker = L.marker([0, 0]).addTo(map);
-
         function updatePosition(position) {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
-            map.setView([lat, lon], 13);
-            marker.setLatLng([lat, lon]);
+            map.setCenter([lon, lat]);
+            marker.setLngLat([lon, lat]);
 
             fetch('/save_location', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ lat: lat, lon: lon })
+            }).then(() => fetch('/get_locations'))
+              .then(response => response.json())
+              .then(locations => {
+                exploredLocations = locations;
+                localStorage.setItem('exploredLocations', JSON.stringify(exploredLocations));
+                document.getElementById('debug').innerText = JSON.stringify(exploredLocations, null, 2);
+                updateExploredCells();
             });
+
+            // Fetch grid data for the visible area
+            fetchGridData();
         }
 
         function showError(error) {
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    alert("User denied the request for Geolocation.");
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    alert("Location information is unavailable.");
-                    break;
-                case error.TIMEOUT:
-                    alert("The request to get user location timed out.");
-                    break;
-                case error.UNKNOWN_ERROR:
-                    alert("An unknown error occurred.");
-                    break;
+            console.error("Error: ", error.message);
+        }
+
+        function updateExploredCells() {
+            console.log('Updating explored cells');
+            console.log('Explored locations:', exploredLocations);
+            if (!gridData) return;
+
+            gridData.features.forEach(feature => {
+                const [lon1, lat1] = feature.geometry.coordinates[0][0];
+                const [lon2, lat2] = feature.geometry.coordinates[0][2];
+                const isExplored = exploredLocations.some(location => 
+                    location.lat >= lat1 && location.lat <= lat2 && 
+                    location.lon >= lon1 && location.lon <= lon2
+                );
+                
+                map.setFeatureState(
+                    { source: 'grid', id: feature.id },
+                    { explored: isExplored }
+                );
+            });
+        }
+
+        function fetchGridData() {
+            const bounds = map.getBounds();
+            fetch(`/get_grid?min_lat=${bounds._sw.lat}&max_lat=${bounds._ne.lat}&min_lon=${bounds._sw.lng}&max_lon=${bounds._ne.lng}&grid_size=${gridSize}`)
+                .then(response => response.json())
+                .then(data => {
+                    gridData = data;
+                    // Add unique IDs to grid features
+                    gridData.features.forEach((feature, index) => {
+                        feature.id = index;
+                    });
+                    updateGrid();
+                    updateExploredCells();
+                });
+        }
+
+        function updateGrid() {
+            if (map.getSource('grid')) {
+                map.getSource('grid').setData(gridData);
+            } else {
+                map.addSource('grid', {
+                    'type': 'geojson',
+                    'data': gridData
+                });
+
+                map.addLayer({
+                    'id': 'grid',
+                    'type': 'fill',
+                    'source': 'grid',
+                    'layout': {},
+                    'paint': {
+                        'fill-color': [
+                            'case',
+                            ['boolean', ['feature-state', 'explored'], false],
+                            'rgba(0, 255, 0, 0.0001)',  // Green for explored
+                            'rgba(128, 128, 128, 1)'  // Grey for unexplored
+                        ],
+                        'fill-opacity': 0.5
+                    }
+                });
+
+                map.addLayer({
+                    'id': 'grid-outline',
+                    'type': 'line',
+                    'source': 'grid',
+                    'layout': {},
+                    'paint': {
+                        'line-color': '#000000',
+                        'line-width': 0
+                    }
+                });
             }
         }
+
+        map.on('moveend', fetchGridData);
+
+        map.on('render', () => {
+            if (map.loaded()) {
+                console.log('Rendered features:', map.queryRenderedFeatures({ layers: ['grid'] }));
+            }
+        });
+
+        // Initial fetch of locations
+        fetch('/get_locations')
+            .then(response => response.json())
+            .then(locations => {
+                exploredLocations = locations;
+                localStorage.setItem('exploredLocations', JSON.stringify(exploredLocations));
+                document.getElementById('debug').innerText = JSON.stringify(exploredLocations, null, 2);
+                updateExploredCells();
+            });
+
+        // Initial grid data fetch
+        map.on('load', fetchGridData);
     </script>
 </body>
 </html>
