@@ -2,6 +2,9 @@ from flask import Flask, render_template, request, jsonify
 import json
 import os
 import sys
+import base64
+from PIL import Image
+import io
 
 # Add the classifiers directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'NN'))
@@ -50,18 +53,20 @@ def get_grid():
 
 @app.route('/classify_image', methods=['POST'])
 def classify_image():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
+    data = request.get_json()
+    if 'image' not in data:
+        return jsonify({"error": "No image data"}), 400
 
-    file = request.files['file']
-    
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
+    base64_image = data['image']
 
     try:
+        # Decode the base64 image
+        image_data = base64.b64decode(base64_image)
+        image = Image.open(io.BytesIO(image_data))
+
         # Save temp file
         temp_file_path = 'temp.jpg'
-        file.save(temp_file_path)
+        image.save(temp_file_path)
 
         # Classify the image
         classifier = AnimalClassifier()
@@ -108,5 +113,4 @@ def generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size):
     return grid
 
 if __name__ == '__main__':
-    print(AnimalClassifier().classify("NN/monarch.jpg"))
     app.run(debug=True)
