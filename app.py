@@ -1,7 +1,15 @@
 from flask import Flask, render_template, request, jsonify
 import json
+import os
+import sys
 
-app = Flask(__name__)
+# Add the classifiers directory to the Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'NN'))
+
+# Now you can import AnimalClassifier
+from animalClassifier import AnimalClassifier
+
+app = Flask(__name__, template_folder="Map/Templates")
 app.config.from_pyfile('config.py')
 
 travelled_locations = []
@@ -40,6 +48,34 @@ def get_grid():
     grid = generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size)
     return jsonify(grid)
 
+@app.route('/classify_image', methods=['POST'])
+def classify_image():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    try:
+        # Save temp file
+        temp_file_path = 'temp.jpg'
+        file.save(temp_file_path)
+
+        # Classify the image
+        classifier = AnimalClassifier()
+        animal, species = classifier.classify(temp_file_path)
+       
+        # Optionally, delete the temporary file after processing
+        os.remove(temp_file_path)
+        
+
+        return jsonify({"animal": animal, "species": species})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 def generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size):
     grid = {
         "type": "FeatureCollection",
@@ -72,4 +108,5 @@ def generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size):
     return grid
 
 if __name__ == '__main__':
+    print(AnimalClassifier().classify("NN/monarch.jpg"))
     app.run(debug=True)

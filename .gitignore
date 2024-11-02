@@ -8,8 +8,10 @@
 # Ignore data files
 *.png
 *.jpg
+
+# Ignore python files
 .venv
 .vscode
 __pycache__
 *.pyc
-Map/config.py
+*config.py
