@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gotta Track 'Em All</title>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.js'></script>
+    <style>
+        #map { height: 100%; width: 100%; position: absolute; }
+        #debug { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="debug"></div>
+    <script>
+        const mapboxAccessToken = '{{ mapbox_access_token }}';
+        mapboxgl.accessToken = mapboxAccessToken;
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [-1.5757, 54.7670], // Example: Durham, UK
+            zoom: 17,
+            interactive: false
+        });
+
+        const marker = new mapboxgl.Marker().setLngLat([0, 0]).addTo(map);
+        let exploredLocations = [];
+        let gridData;
+        const gridSize = 0.001; // Grid size in degrees
+
+        // Load explored locations from local storage
+        const storedLocations = localStorage.getItem('exploredLocations');
+        if (storedLocations) {
+            exploredLocations = JSON.parse(storedLocations);
+        }
+
+        function updatePosition(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            marker.setLngLat([lon, lat]);
+
+            // Center the map on the new position without animation
+            map.setCenter([lon, lat], { animate: false });
+
+            fetch('/save_location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat: lat, lon: lon })
+            }).then(() => fetch('/get_locations'))
+              .then(response => response.json())
+              .then(locations => {
+                exploredLocations = locations;
+                localStorage.setItem('exploredLocations', JSON.stringify(exploredLocations));
+                updateExploredCells();
+            });
+        }
+
+        function showError(error) {
+            console.error("Error: ", error.message);
+        }
+
+        function updateExploredCells() {
+            if (!gridData) return;
+
+            gridData.features.forEach(feature => {
+                const [lon1, lat1] = feature.geometry.coordinates[0][0];
+                const [lon2, lat2] = feature.geometry.coordinates[0][2];
+                const isExplored = exploredLocations.some(location => 
+                    location.lat >= lat1 && location.lat <= lat2 && 
+                    location.lon >= lon1 && location.lon <= lon2
+                );
+                
+                map.setFeatureState(
+                    { source: 'grid', id: feature.id },
+                    { explored: isExplored }
+                );
+            });
+        }
+
+        function fetchGridData() {
+            const bounds = map.getBounds();  // Get the current visible bounds of the map
+            const minLat = bounds.getSouth();  // Minimum latitude (south)
+            const maxLat = bounds.getNorth();  // Maximum latitude (north)
+            const minLon = bounds.getWest();   // Minimum longitude (west)
+            const maxLon = bounds.getEast();   // Maximum longitude (east)
+
+            const gridSize = 0.001;  // Grid size in degrees (adjust as needed)
+
+            fetch(`/get_grid?min_lat=${minLat}&max_lat=${maxLat}&min_lon=${minLon}&max_lon=${maxLon}&grid_size=${gridSize}`)
+                .then(response => response.json())
+                .then(data => {
+                    gridData = data;
+                    gridData.features.forEach((feature, index) => {
+                        feature.id = index;
+                    });
+                    updateGrid();
+                    updateExploredCells();
+                });
+        }
+
+        function updateGrid() {
+            if (map.getSource('grid')) {
+                map.getSource('grid').setData(gridData);
+            } else {
+                map.addSource('grid', {
+                    'type': 'geojson',
+                    'data': gridData
+                });
+
+                map.addLayer({
+                    'id': 'grid',
+                    'type': 'fill',
+                    'source': 'grid',
+                    'layout': {},
+                    'paint': {
+                        'fill-color': [
+                            'case',
+                            ['boolean', ['feature-state', 'explored'], false],
+                            'rgba(0, 255, 0, 0.0001)',  // Green for explored
+                            'rgba(128, 128, 128, 0.5)'  // Grey for unexplored
+                        ]
+                    }
+                });
+
+                map.addLayer({
+                    'id': 'grid-outline',
+                    'type': 'line',
+                    'source': 'grid',
+                    'layout': {},
+                    'paint': {
+                        'line-color': '#000000',
+                        'line-width': 0
+                    }
+                });
+            }
+        }
+
+        map.on('load', () => {
+            fetchGridData();
+
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(updatePosition, showError, {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 5000
+                });
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        });
+
+        map.on('moveend', fetchGridData);
+
+        // Initial fetch of locations
+        fetch('/get_locations')
+            .then(response => response.json())
+            .then(locations => {
+                exploredLocations = locations;
+                localStorage.setItem('exploredLocations', JSON.stringify(exploredLocations));
+                updateExploredCells();
+            });
+    </script>
+</body>
+</html>

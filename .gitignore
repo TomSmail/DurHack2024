@@ -2,3 +2,17 @@
 database/test_sightings.py
 test_mongo_connection.py
 *__pycache__
+*kaggle.json
+*venv
+*.vscode
+
+
+# Ignore data files
+*.png
+*.jpg
+
+# Ignore python files
+.venv
+.vscode
+*.pyc
+*config.py
