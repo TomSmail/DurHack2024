@@ -1,0 +1,10 @@
+*kaggle.json
+*venv
+*.vscode
+
+# Ignore model files
+*.pth
+
+# Ignore data files
+*.png
+*.jpg
