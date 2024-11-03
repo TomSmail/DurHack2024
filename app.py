@@ -55,9 +55,28 @@ def get_grid():
     max_lat = float(request.args.get('max_lat'))
     min_lon = float(request.args.get('min_lon'))
     max_lon = float(request.args.get('max_lon'))
-    grid_size = float(request.args.get('grid_size', 0.1))  # Grid size in degrees
+    grid_size = float(request.args.get('grid_size', 0.001))  # Grid size in degrees
     
     grid = generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size)
+    
+    # Load explored locations
+    try:
+        with open('locations.json', 'r') as f:
+            explored_locations = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        explored_locations = []
+    
+    # Mark explored cells
+    for feature in grid['features']:
+        coords = feature['geometry']['coordinates'][0]
+        min_lon, min_lat = coords[0]
+        max_lon, max_lat = coords[2]
+        
+        for location in explored_locations:
+            if min_lat <= location['lat'] <= max_lat and min_lon <= location['lon'] <= max_lon:
+                feature['properties']['explored'] = True
+                break
+    
     return jsonify(grid)
 
 @app.route('/classify_image', methods=['POST'])
@@ -99,7 +118,6 @@ def generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size):
     lat = min_lat
     while lat < max_lat:
         lon = min_lon
-        # Adjust longitude step size based on current latitude to ensure square cells
         lon_diff = grid_size / math.cos(math.radians(lat))
         while lon < max_lon:
             grid["features"].append({
@@ -122,6 +140,13 @@ def generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size):
         lat += grid_size
 
     return grid
+
+def get_explored_grids_count(grid_data):
+    explored_count = 0
+    for feature in grid_data['features']:
+        if feature['properties'].get('explored', False):
+            explored_count += 1
+    return explored_count
 
 if __name__ == '__main__':
     app.run(debug=True)
