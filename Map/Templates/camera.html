@@ -106,8 +106,19 @@
             })
             .then(response => response.json())
             .then(data => {
+                // Popup alert with the classification result
+                if (data.animal == 'Unknown') {
+                    alert('No animal detected');
+                } else {
+                    if (data.species == 'Unknown') {
+                        alert('Animal Identified: ' + data.animal);
+                    } else {
+                        alert('Animal Identified: ' + data.animal + ' (' + data.species + ')');
+                }
+                alert('Animal Identified' + data.animal);
                 console.log('Success:', data);
-            })
+                }}
+            )
             .catch((error) => {
                 console.error('Error:', error);
             });

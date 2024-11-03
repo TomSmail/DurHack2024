@@ -88,8 +88,6 @@ def classify_image():
         temp_file_path = 'temp.jpg'
         image.save(temp_file_path)
 
-        image.show()
-
         # Classify the image
         classifier = AnimalClassifier()
         animal, species = classifier.classify(temp_file_path)
