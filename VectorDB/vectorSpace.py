@@ -5,10 +5,10 @@ from PIL import Image
 from transformers import AutoProcessor, BlipForConditionalGeneration
 
 import streamlit as st
-import time
-
+import datetime
 import random
 import string
+import pandas as pd
 
 
 class TextExtractor():
@@ -61,29 +61,12 @@ class VectorDatabaseApp:
     def run(self):
         st.title("Vector Database Query with LLM")
 
-        # Upload image
-        # uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
         for i in range(1, 6):
             filepath = f"VectorDB/data/{i}.jpeg"
             extracted_text = self.text_extractor.extract_text(filepath)
-            self.vector_db.store_feature_vector(filepath, extracted_text, metadatas={"image_id": i})
-
-        # if uploaded_file is not None:
-        #     # Extract text from the image
-        #     image_path = uploaded_file.name
-        #     with open(image_path, "wb") as f:
-        #         f.write(uploaded_file.getbuffer())
-
-        #     extracted_text = self.text_extractor.extract_text(image_path)
-        #     st.write(f"Extracted Text: {extracted_text}")
-        #     # Store feature vector in the database
-        #     image_id = image_path
-        #     document = extracted_text
-        #     st.write(f"Storing feature vector for image {image_path}")
-
-        #     self.vector_db.store_feature_vector(image_id, document)
-
+            metadatas = {"image_id": i, "image_path": filepath, "location": "Durham", "date": datetime.datetime.now().isoformat()}
+            self.vector_db.store_feature_vector(filepath, extracted_text, metadatas=metadatas)
 
         # Query the database
         query = st.text_input("Enter your query")
@@ -93,13 +76,58 @@ class VectorDatabaseApp:
             st.write("Query Results:")
             # Prepare data for the table
             table_data = []
-            for doc, meta in zip(results['documents'][0], results['metadatas'][0]):
-                
-                table_data.append({"Document": doc, "Metadata": meta})
-                
 
-            # Display the table
-            st.table(table_data)
+            # Prepare data for the table
+            documents = results['documents'][0]
+            metadatas = results['metadatas'][0]
+
+            # Create DataFrame with columns
+            df = pd.DataFrame({
+                "Text Encoding": documents,
+                "Metadata": metadatas
+            })
+
+            csv_file_path = "VectorDB/data/results.csv"
+            df.to_csv(csv_file_path, index=False)
+
+            # Prepare HTML table with images
+            table_html = """
+            <table>
+                <tr>
+                    <th>Image</th>
+                    <th>Text Encoding</th>
+                    <th>Metadata</th>
+                </tr>
+            """
+            for doc, meta in zip(documents, metadatas):
+                image_path = meta.get("image_path", "")
+                Image.open(image_path)
+                
+                meta_text = ""
+                for key, value in meta.items():
+                    meta_text += f"{key}: {value}  <br>"
+                table_html += f"""
+                <tr>
+                    
+                    <td><img src="{image_path}" width="100"></td>
+                    <td>{doc}</td>
+                    <td>{meta_text}</td>
+                </tr>
+                """
+            table_html += "</table>"
+
+            # Display the table with images
+            st.html(table_html)
+
+
+            # Allow users to download the CSV file
+            with open(csv_file_path, "rb") as f:
+                st.download_button(
+                    label="Download CSV",
+                    data=f,
+                    file_name="results.csv",
+                    mime="text/csv"
+                )
 
 if __name__ == "__main__":
     app = VectorDatabaseApp()
