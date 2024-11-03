@@ -1,0 +1,4 @@
+Text Encoding,Metadata
+a picture of a butterfly,"{'date': '2024-11-03T10:22:13.901509', 'image_id': 4, 'image_path': 'VectorDB/data/4.jpeg', 'location': 'Durham'}"
+a picture of a butterfly on a flower,"{'date': '2024-11-03T10:22:13.546512', 'image_id': 3, 'image_path': 'VectorDB/data/3.jpeg', 'location': 'Durham'}"
+a picture of a blue butterfly on a leaf,"{'date': '2024-11-03T10:22:12.684960', 'image_id': 1, 'image_path': 'VectorDB/data/1.jpeg', 'location': 'Durham'}"

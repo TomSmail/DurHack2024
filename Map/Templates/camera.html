@@ -70,10 +70,26 @@
         document.getElementById('flipCameraButton').style.display = 'none';
         document.getElementById('newPhotoButton').style.display = 'inline';
 
-        sendPhoto(dataUrl);
+        getGeolocationAndSendPhoto(dataUrl);
     }
 
-    function sendPhoto(dataUrl) {
+    function getGeolocationAndSendPhoto(dataUrl) {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                sendPhoto(dataUrl, latitude, longitude);
+            }, (error) => {
+                console.error("Geolocation error:", error);
+                sendPhoto(dataUrl, null, null); // Send with null coordinates if geolocation fails
+            });
+        } else {
+            console.error("Geolocation not supported");
+            sendPhoto(dataUrl, null, null); // Send with null coordinates if geolocation not supported
+        }
+    }
+
+    function sendPhoto(dataUrl, latitude, longitude) {
         const base64String = dataUrl.split(',')[1];
 
         fetch('/classify_image', {
@@ -81,7 +97,11 @@
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ image: base64String })
+            body: JSON.stringify({ 
+                image: base64String,
+                latitude: latitude,
+                longitude: longitude
+            })
         })
         .then(response => response.json())
         .then(data => {
@@ -109,5 +129,3 @@
     });
 </script>
 {% endblock %}
-
-

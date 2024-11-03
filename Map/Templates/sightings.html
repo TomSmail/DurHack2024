@@ -1,0 +1,30 @@
+<!-- sightings.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animal Sightings</title>
+</head>
+<body>
+    <h1>All Animal Sightings</h1>
+    <div id="sightings"></div>
+
+    <script>
+        fetch('/get_sightings')
+            .then(response => response.json())
+            .then(data => {
+                const sightingsDiv = document.getElementById("sightings");
+                data.forEach(sighting => {
+                    const sightingElement = document.createElement("div");
+                    sightingElement.innerHTML = `<h3>${sighting.ai_identification.animal} (${sighting.ai_identification.species})</h3>
+                                                 <p>Location: ${sighting.geolocation.latitude}, ${sighting.geolocation.longitude}</p>
+                                                 <p>Time: ${new Date(sighting.time).toLocaleString()}</p>
+                                                 <img src="${sighting.imgurl}" alt="Sighting Image" style="width:200px;height:auto;" />`;
+                    sightingsDiv.appendChild(sightingElement);
+                });
+            })
+            .catch(error => console.error("Error loading sightings:", error));
+    </script>
+</body>
+</html>
