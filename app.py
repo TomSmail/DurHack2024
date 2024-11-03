@@ -13,7 +13,7 @@ from torchvision import transforms
 sys.path.append(os.path.join(os.path.dirname(__file__), 'NN'))
 
 # Now you can import AnimalClassifier
-from animalClassifier import AnimalClassifier
+from NN.animalClassifier import AnimalClassifier
 from database.sightings import create_sighting
 
 app = Flask(__name__, template_folder="Map/Templates")

@@ -1,34 +1,24 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Page</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
-    <header>
-        <h1>Camera Access</h1>
-        <button id="homeButton" class="home-button">
-            <span class="arrow-left">&#8592;</span> Home
-        </button>
-    </header>
-    
-    <main>
-        <div class="camera-container">
-            <video id="cameraStream" autoplay></video>
-            <canvas id="photoCanvas" style="display: none;"></canvas>
-            <img id="capturedPhoto" alt="Captured Photo" style="display: none;">
-        </div>
+{% extends "base.html" %}
 
-        <div class="button-container">
-            <button id="flipCameraButton" class="green-button">Flip Camera</button>
-            <button id="takePhotoButton" class="green-button">Take Photo</button>
-            <button id="newPhotoButton" class="green-button" style="display: none;">New Picture</button>
-        </div>
-    </main>
+{% block title %}Camera Page{% endblock %}
 
+{% block header_title %}Camera Access{% endblock %}
+
+{% block content %}
+<div class="camera-container">
+    <video id="cameraStream" autoplay></video>
+    <canvas id="photoCanvas" style="display: none;"></canvas>
+    <img id="capturedPhoto" alt="Captured Photo" style="display: none;">
+</div>
+
+<div class="button-container">
+    <button id="flipCameraButton" class="green-button">Flip Camera</button>
+    <button id="takePhotoButton" class="green-button">Take Photo</button>
+    <button id="newPhotoButton" class="green-button" style="display: none;">New Picture</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
     <script>
         let stream;
         let isFrontCamera = true;
