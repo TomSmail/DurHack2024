@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify
 import json
 import os
 import sys
@@ -16,13 +16,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'database'))
 
 from NN.animalClassifier import AnimalClassifier
 from database.sightings import create_sighting
+from database.mongodb_connection import db  # Import the MongoDB database instance
+
+# Access the sightings collection from the imported MongoDB connection
+sightings_collection = db["sightings"]
 
 app = Flask(__name__, template_folder="Map/Templates")
 app.config.from_pyfile('config.py')
-
-# Directory to store uploaded images
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Create the folder if it doesn't exist
 
 @app.route('/')
 def index():
@@ -53,7 +53,7 @@ def save_location():
 @app.route('/classify_image', methods=['POST'])
 def classify_image():
     data = request.get_json()
-    
+
     if 'image' not in data:
         return jsonify({"error": "No image data"}), 400
 
@@ -69,29 +69,28 @@ def classify_image():
         if image.mode == 'RGBA':
             image = image.convert('RGB')
 
-        # Generate a unique filename for the image
-        filename = f"{uuid.uuid4()}.jpg"
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
-        image.save(file_path)  # Save the image to the uploads folder
+        # Convert the image to binary data for MongoDB
+        image_bytes = io.BytesIO()
+        image.save(image_bytes, format='JPEG')
+        image_binary = image_bytes.getvalue()
 
         # Classify the image
         classifier = AnimalClassifier()
-        animal, species = classifier.classify(file_path)
+        animal, species = classifier.classify(io.BytesIO(image_binary))
 
-        # Store the relative path or URL to the image in MongoDB
-        img_url = f"/{UPLOAD_FOLDER}/{filename}"  # Assuming images are served from this URL
+        # Save sighting information with binary image data
+        sighting_id = str(uuid.uuid4())
+        sighting_data = {
+            "sightingID": sighting_id,
+            "image_data": image_binary,
+            "time": datetime.utcnow(),
+            "geolocation": {'latitude': latitude, 'longitude': longitude},
+            "ai_identification": {'animal': animal, 'species': species},
+            "user_identification": None
+        }
+        sightings_collection.insert_one(sighting_data)
 
-        # Save sighting information with the image URL
-        create_sighting(
-            sightingID=str(uuid.uuid4()),
-            imgurl=img_url,
-            time=datetime.utcnow(),
-            geolocation={'latitude': latitude, 'longitude': longitude},
-            ai_identification={'animal': animal, 'species': species},
-            user_identification=None
-        )
-
-        return jsonify({"animal": animal, "species": species})
+        return jsonify({"animal": animal, "species": species, "sightingID": sighting_id})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -103,66 +102,28 @@ def get_grid():
     min_lon = float(request.args.get('min_lon'))
     max_lon = float(request.args.get('max_lon'))
     grid_size = float(request.args.get('grid_size', 0.001))  # Grid size in degrees
-    
+
     grid = generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size)
-    
+
     # Load explored locations
     try:
         with open('locations.json', 'r') as f:
             explored_locations = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         explored_locations = []
-    
+
     # Mark explored cells
     for feature in grid['features']:
         coords = feature['geometry']['coordinates'][0]
         min_lon, min_lat = coords[0]
         max_lon, max_lat = coords[2]
-        
+
         for location in explored_locations:
             if min_lat <= location['lat'] <= max_lat and min_lon <= location['lon'] <= max_lon:
                 feature['properties']['explored'] = True
                 break
-    
+
     return jsonify(grid)
-
-@app.route('/classify_image', methods=['POST'])
-def classify_image():
-    
-    data = request.get_json()
-    if 'image' not in data:
-        return jsonify({"error": "No image data"}), 400
-
-    base64_image = data['image']
-
-    try:
-
-        # Decode the base64 image
-        image_data = base64.b64decode(base64_image)
-        image = Image.open(io.BytesIO(image_data))
-
-        if image.mode == 'RGBA':
-            image = image.convert('RGB')
-
-        # Save temp file
-        temp_file_path = 'temp.jpg'
-        image.save(temp_file_path)
-
-        # Classify the image
-        classifier = AnimalClassifier()
-        animal, species = classifier.classify(temp_file_path)
-
-
-        # Optionally, delete the temporary file after processing
-        os.remove(temp_file_path)
-
-        return jsonify({"animal": animal, "species": species})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
 
 def generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size):
     grid = {
