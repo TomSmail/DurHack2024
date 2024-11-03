@@ -7,138 +7,135 @@
 
 body {
     font-family: 'Georgia', serif;
-    background-image: url('assets/birds.jpg'); /* Path to your background image */
-    background-size: cover; /* Cover the entire background */
-    background-position: center; /* Center the image */
+    background-image: url('assets/Background2.jpg');
+    background-size: cover;
+    background-position: center;
     color: #2e7d32;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
     min-height: 100vh;
     margin: 0;
-    padding: 20px; /* Add some padding for better spacing */
+    padding: 0;
 }
 
 /* Header Styles */
 header {
-    background-color: rgba(27, 94, 32, 0.8); /* Semi-transparent header background */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
     color: white;
     width: 100%;
     padding: 15px 20px;
     text-align: center;
-    border-radius: 5px; /* Rounded edges for a modern look */
+    border-radius: 5px;
+    z-index: 1000;
 }
 
-/* Main Styles */
+/* Main Content Styles */
 main {
     flex: 1;
     display: flex;
-    flex-direction: column; /* Stack items vertically */
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    text-align: center;
     width: 100%;
-    max-width: 800px; /* Limit the width for a cleaner layout */
+    max-width: 800px;
+    margin: 100px auto 0;
+    padding: 0 20px;
+}
+
+/* Map Styles */
+#map {
+    position: relative;
+    height: calc(100vh - 120px);
+    width: 100%;
     margin-top: 20px;
 }
 
-/* Footer Styles */
-footer {
-    background-color: #2e7d32;
-    width: 100%;
-    padding: 10px;
+/* Map Buttons Container */
+.map-buttons-container {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
     display: flex;
-    justify-content: space-around;
-    border-radius: 5px; /* Rounded edges */
+    gap: 10px;
 }
 
 /* Button Styles */
-button {
-    background-color: #66bb6a;
-    border: none;
+.nav-button, .map-button {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #4CAF50;
     color: white;
-    background-image: url('assets/button.png'); /* Path to your button image */
-    background-size: contain; /* Ensure the image fits well */
-    background-position: center;
-    background-repeat: no-repeat; /* Prevent the image from repeating */
-    width: 150px;
-    height: 50px;
+    text-decoration: none;
+    font-size: 16px;
+    border: none;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 16px;
-    transition: filter 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    margin-bottom: 10px; /* Space between buttons */
+    transition: background-color 0.3s ease;
 }
 
-/* Button Hover & Active Effects */
-button:hover {
-    filter: brightness(1.1); /* Brightens the button on hover */
+.nav-button:hover, .map-button:hover {
+    background-color: #45a049;
 }
 
-button:active {
-    filter: brightness(1.3); /* Brightens the button more when pressed */
+.nav-button:active, .map-button:active {
+    background-color: #3e8e41;
 }
 
 /* Camera Container Styles */
 .camera-container {
     display: flex;
-    flex-direction: column; /* Stack elements vertically */
+    flex-direction: column;
     align-items: center;
+    width: 100%;
     margin-top: 20px;
-    width: 100%; /* Full width for better responsiveness */
 }
 
-/* Video Styles */
 #cameraStream {
-    max-width: 100%; /* Ensure the video scales well */
+    max-width: 100%;
     border-radius: 10px;
-    margin-bottom: 20px; /* Add space below the video */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Add a subtle shadow */
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
-/* Search Bar Styles */
+/* Search and Card Styles */
 #searchInput {
     width: 100%;
-    max-width: 400px; /* Limit the width for better design */
+    max-width: 400px;
     padding: 10px;
     font-size: 16px;
     margin-bottom: 20px;
     border: 1px solid #ccc;
     border-radius: 5px;
-    box-sizing: border-box;
 }
 
-/* Card Container Styles */
 .card-container {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
     justify-content: center;
-    padding: 10px; /* Add padding for spacing */
+    padding: 10px;
 }
 
-/* Animal Card Styles */
 .card {
     background-color: white;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    width: 150px;
+    width: 200px;
     text-align: center;
     padding: 15px;
-    transition: transform 0.2s, box-shadow 0.2s; /* Smooth transitions */
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* More prominent shadow on hover */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Animal Photo Styles */
 .animal-photo {
     width: 100px;
     height: 100px;
@@ -147,32 +144,10 @@ button:active {
     margin-bottom: 10px;
 }
 
-.card-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-around;
+/* Responsive Design */
+@media screen and (max-width: 600px) {
+    .nav-button, .map-button {
+        padding: 8px 16px;
+        font-size: 14px;
+    }
 }
-
-.card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    margin: 10px;
-    width: 200px;
-    text-align: center;
-}
-
-.animal-photo {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-}
-
-#searchInput {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 20px;
-    box-sizing: border-box;
-}
-
-

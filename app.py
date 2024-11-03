@@ -116,15 +116,7 @@ def classify_image():
         classifier = AnimalClassifier()
         animal, species = classifier.classify(temp_file_path)
 
-        create_sighting(
-            sightingID=sighting_id,
-            imgurl=image_path,
-            time=datetime.now(),
-            geolocation={'latitude': latitude, 'longitude': longitude},
-            ai_identification={'animal': animal, 'species': species},
-            user_identification=None
-        )
-       
+
         # Optionally, delete the temporary file after processing
         os.remove(temp_file_path)
 

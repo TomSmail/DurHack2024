@@ -17,7 +17,8 @@
       <span class="arrow-left">&#8592;</span> Home
     </button>
     {% endif %}
-    <button id="animalDexButton" class="nav-button">Animal Dex</button>
+    <button id="animalDexButton" class="map-button">Animal Dex</button>
+    <button id="cameraButton" class="map-button">Camera</button>
   </nav>
 </header>
 
@@ -26,15 +27,24 @@
 </main>
 
 {% block scripts %}{% endblock %}
+
 <script>
-        {% if page != 'map' %}
-        document.getElementById('homeButton').addEventListener('click', () => {
-            window.location.href = '/';
+    {% if page != 'map' %}
+    document.getElementById('homeButton').addEventListener('click', () => {
+        window.location.href = '/';
+    });
+    {% endif %}
+    document.getElementById('animalDexButton').addEventListener('click', () => {
+        window.location.href = '/animals';
+    });
+    // Add the camera button functionality
+    const cameraButton = document.getElementById('cameraButton');
+    if (cameraButton) {
+        cameraButton.addEventListener('click', () => {
+            window.location.href = '/camera';
         });
-        {% endif %}
-        document.getElementById('animalDexButton').addEventListener('click', () => {
-            window.location.href = '/animals';
-        });
-    </script>
+    }
+</script>
+
 </body>
 </html>
