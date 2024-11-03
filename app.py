@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import json
 import os
 import sys
@@ -15,7 +15,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'NN'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'database'))
 
 from NN.animalClassifier import AnimalClassifier
-from database.sightings import create_sighting
 from database.mongodb_connection import db  # Import the MongoDB database instance
 
 # Access the sightings collection from the imported MongoDB connection
@@ -124,6 +123,14 @@ def get_grid():
                 break
     
     return jsonify(grid)
+
+@app.route('/get_image/<sightingID>')
+def get_image(sightingID):
+    sighting = sightings_collection.find_one({"sightingID": sightingID})
+    if sighting and "image_data" in sighting:
+        image_data = sighting["image_data"]
+        return send_file(io.BytesIO(image_data), mimetype='image/jpeg')
+    return "Image not found", 404
 
 def generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size):
     grid = {
