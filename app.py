@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify
 import json
 import os
 import sys
@@ -16,13 +16,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'database'))
 
 from NN.animalClassifier import AnimalClassifier
 from database.sightings import create_sighting
+from database.mongodb_connection import db  # Import the MongoDB database instance
+
+# Access the sightings collection from the imported MongoDB connection
+sightings_collection = db["sightings"]
 
 app = Flask(__name__, template_folder="Map/Templates")
 app.config.from_pyfile('config.py')
-
-# Directory to store uploaded images
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Create the folder if it doesn't exist
 
 @app.route('/')
 def index():
@@ -69,29 +69,28 @@ def classify_image():
         if image.mode == 'RGBA':
             image = image.convert('RGB')
 
-        # Generate a unique filename for the image
-        filename = f"{uuid.uuid4()}.jpg"
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
-        image.save(file_path)  # Save the image to the uploads folder
+        # Convert the image to binary data for MongoDB
+        image_bytes = io.BytesIO()
+        image.save(image_bytes, format='JPEG')
+        image_binary = image_bytes.getvalue()
 
         # Classify the image
         classifier = AnimalClassifier()
-        animal, species = classifier.classify(file_path)
+        animal, species = classifier.classify(io.BytesIO(image_binary))
 
-        # Store the relative path or URL to the image in MongoDB
-        img_url = f"/{UPLOAD_FOLDER}/{filename}"  # Assuming images are served from this URL
+        # Save sighting information with binary image data
+        sighting_id = str(uuid.uuid4())
+        sighting_data = {
+            "sightingID": sighting_id,
+            "image_data": image_binary,
+            "time": datetime.utcnow(),
+            "geolocation": {'latitude': latitude, 'longitude': longitude},
+            "ai_identification": {'animal': animal, 'species': species},
+            "user_identification": None
+        }
+        sightings_collection.insert_one(sighting_data)
 
-        # Save sighting information with the image URL
-        create_sighting(
-            sightingID=str(uuid.uuid4()),
-            imgurl=img_url,
-            time=datetime.utcnow(),
-            geolocation={'latitude': latitude, 'longitude': longitude},
-            ai_identification={'animal': animal, 'species': species},
-            user_identification=None
-        )
-
-        return jsonify({"animal": animal, "species": species})
+        return jsonify({"animal": animal, "species": species, "sightingID": sighting_id})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -125,10 +124,6 @@ def get_grid():
                 break
     
     return jsonify(grid)
-
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
 
 def generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size):
     grid = {
