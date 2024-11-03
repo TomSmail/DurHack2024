@@ -23,11 +23,15 @@ travelled_locations = []
 
 @app.route('/')
 def index():
-    return render_template('index.html', mapbox_access_token=app.config['MAPBOX_ACCESS_TOKEN'])
+    return render_template('index.html', mapbox_access_token=app.config['MAPBOX_ACCESS_TOKEN'], page='map')
 
 @app.route('/camera')
 def camera():
-    return render_template('camera.html')
+    return render_template('camera.html', page='camera')
+
+@app.route('/animals')
+def animals():
+    return render_template('animals.html', page='animals')
 
 @app.route('/save_location', methods=['POST'])
 def save_location():
