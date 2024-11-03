@@ -14,6 +14,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'NN'))
 
 # Now you can import AnimalClassifier
 from animalClassifier import AnimalClassifier
+from database.sightings import create_sighting
 
 app = Flask(__name__, template_folder="Map/Templates")
 app.config.from_pyfile('config.py')
@@ -110,6 +111,15 @@ def classify_image():
         # Classify the image
         classifier = AnimalClassifier()
         animal, species = classifier.classify(temp_file_path)
+
+        create_sighting(
+            sightingID=sighting_id,
+            imgurl=image_path,
+            time=datetime.now(),
+            geolocation={'latitude': latitude, 'longitude': longitude},
+            ai_identification={'animal': animal, 'species': species},
+            user_identification=None
+        )
        
         # Optionally, delete the temporary file after processing
         os.remove(temp_file_path)

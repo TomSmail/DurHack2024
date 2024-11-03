@@ -1,5 +1,5 @@
 # sightings.py
-from mongodb_connection import db
+from database.mongodb_connection import db
 from datetime import datetime
 
 sightings_collection = db['sightings']
