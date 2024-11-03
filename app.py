@@ -6,11 +6,14 @@ import base64
 from PIL import Image
 import io
 import math
+import uuid
 
+from datetime import datetime
 from torchvision import transforms
 
 # Add the classifiers directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'NN'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'database'))
 
 # Now you can import AnimalClassifier
 from NN.animalClassifier import AnimalClassifier
@@ -23,15 +26,11 @@ travelled_locations = []
 
 @app.route('/')
 def index():
-    return render_template('index.html', mapbox_access_token=app.config['MAPBOX_ACCESS_TOKEN'], page='map')
+    return render_template('index.html', mapbox_access_token=app.config['MAPBOX_ACCESS_TOKEN'])
 
 @app.route('/camera')
 def camera():
-    return render_template('camera.html', page='camera')
-
-@app.route('/animals')
-def animals():
-    return render_template('animalList.html', page='animals')
+    return render_template('camera.html')
 
 @app.route('/save_location', methods=['POST'])
 def save_location():
@@ -92,15 +91,16 @@ def get_grid():
 
 @app.route('/classify_image', methods=['POST'])
 def classify_image():
-    
     data = request.get_json()
+    
     if 'image' not in data:
         return jsonify({"error": "No image data"}), 400
 
     base64_image = data['image']
+    latitude = data.get('latitude', 0.0)  # Default to 0.0 if not provided
+    longitude = data.get('longitude', 0.0)  # Default to 0.0 if not provided
 
     try:
-
         # Decode the base64 image
         image_data = base64.b64decode(base64_image)
         image = Image.open(io.BytesIO(image_data))
@@ -116,22 +116,23 @@ def classify_image():
         classifier = AnimalClassifier()
         animal, species = classifier.classify(temp_file_path)
 
+        # Save sighting information with location data
         create_sighting(
-            sightingID=sighting_id,
-            imgurl=image_path,
+            sightingID=str(uuid.uuid4()),
+            imgurl=temp_file_path,
             time=datetime.now(),
             geolocation={'latitude': latitude, 'longitude': longitude},
             ai_identification={'animal': animal, 'species': species},
             user_identification=None
         )
-       
-        # Optionally, delete the temporary file after processing
-        os.remove(temp_file_path)
+
+        os.remove(temp_file_path)  # Optionally delete temp file after processing
 
         return jsonify({"animal": animal, "species": species})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 def generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size):
     grid = {
