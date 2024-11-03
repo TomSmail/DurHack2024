@@ -78,6 +78,28 @@ main {
     transition: background-color 0.3s ease;
 }
 
+.green-button {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    background-image: url('assets/button.png'); /* Path to your button image /
+    background-size: contain; / Ensure the image fits well /
+    background-position: center;
+    background-repeat: no-repeat; / Prevent the image from repeating /
+    width: 150px;
+    height: 50px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: filter 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin-bottom: 10px; / Space between buttons */
+}
+
 .nav-button:hover, .map-button:hover {
     background-color: #45a049;
 }
