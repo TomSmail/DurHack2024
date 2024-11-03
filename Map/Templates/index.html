@@ -5,28 +5,9 @@
 {% block extra_head %}
 <link href='https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.css' rel='stylesheet' />
 <script src='https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.js'></script>
-<style>
-        #map { height: 80%; width: 80%; position: absolute; }
-        #debug { margin-top: 20px; }
-        .overlay-button {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            z-index: 1;
-        }
-        .overlay-button:hover {
-            background-color: #0056b3;
-        }
-    </style>
 {% endblock %}
 
-{% block header_title %}Map{% endblock %}
+{% block header_title %}Welcome to Snapimals!{% endblock %}
 
 {% block content %}
 <div id="map"></div>
@@ -42,7 +23,7 @@
         container: 'map',
         style: 'mapbox://styles/mapbox/streets-v11',
         center: [-1.5757, 54.7670], // Example: Durham, UK
-        zoom: 17,
+        zoom: 15,
         interactive: false
     });
 
