@@ -61,8 +61,8 @@ def classify_image():
         return jsonify({"error": "No image data"}), 400
 
     base64_image = data['image']
-    latitude = data.get('latitude', 0.0)  # Default to 0.0 if not provided
-    longitude = data.get('longitude', 0.0)  # Default to 0.0 if not provided
+    latitude = data.get('latitude', 0.0)
+    longitude = data.get('longitude', 0.0)
 
     try:
         # Decode the base64 image
@@ -104,7 +104,7 @@ def get_grid():
     max_lat = float(request.args.get('max_lat'))
     min_lon = float(request.args.get('min_lon'))
     max_lon = float(request.args.get('max_lon'))
-    grid_size = float(request.args.get('grid_size', 0.001))  # Grid size in degrees
+    grid_size = float(request.args.get('grid_size', 0.001))
 
     grid = generate_grid(min_lat, max_lat, min_lon, max_lon, grid_size)
 
