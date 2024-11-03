@@ -1,11 +1,12 @@
 .env
+env
 database/test_sightings.py
 test_mongo_connection.py
 *__pycache__
 *kaggle.json
 *venv
 *.vscode
-
+.idea*
 
 # Ignore data files
 *.png

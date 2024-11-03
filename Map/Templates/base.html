@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Gotta Track 'Em All{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+<header>
+  <h1>{% block header_title %}{% endblock %}</h1>
+  <nav>
+    {% if page != 'map' %}
+    <button id="homeButton" class="nav-button">
+      <span class="arrow-left">&#8592;</span> Home
+    </button>
+    {% endif %}
+    <button id="animalDexButton" class="nav-button">Animal Dex</button>
+  </nav>
+</header>
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+{% block scripts %}{% endblock %}
+<script>
+        {% if page != 'map' %}
+        document.getElementById('homeButton').addEventListener('click', () => {
+            window.location.href = '/';
+        });
+        {% endif %}
+        document.getElementById('animalDexButton').addEventListener('click', () => {
+            window.location.href = '/animals';
+        });
+    </script>
+</body>
+</html>

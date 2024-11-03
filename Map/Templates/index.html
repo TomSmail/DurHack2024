@@ -1,13 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gotta Track 'Em All</title>
-    <link href='https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.css' rel='stylesheet' />
-    <script src='https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.js'></script>
-    <style>
-        #map { height: 100%; width: 100%; position: absolute; }
+{% extends "base.html" %}
+
+{% block title %}Map - Gotta Track 'Em All{% endblock %}
+
+{% block extra_head %}
+<link href='https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.css' rel='stylesheet' />
+<script src='https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.js'></script>
+<style>
+        #map { height: 80%; width: 80%; position: absolute; }
         #debug { margin-top: 20px; }
         .overlay-button {
             position: absolute;
@@ -19,146 +18,149 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            z-index: 1; /* Ensure the button is on top of the map */
+            z-index: 1;
         }
         .overlay-button:hover {
             background-color: #0056b3;
         }
     </style>
+{% endblock %}
 
-</head>
-<body>
-    <div id="map"></div>
-    <div id="debug"></div>
-    <button class="overlay-button" onclick="window.location.href='/camera'">Camera</button>
-    <script>
-        const mapboxAccessToken = '{{ mapbox_access_token }}';
-        mapboxgl.accessToken = mapboxAccessToken;
-        const map = new mapboxgl.Map({
-            container: 'map',
-            style: 'mapbox://styles/mapbox/streets-v11',
-            center: [-1.5757, 54.7670], // Example: Durham, UK
-            zoom: 17,
-            interactive: false
+{% block header_title %}Map{% endblock %}
+
+{% block content %}
+<div id="map"></div>
+<div id="debug"></div>
+<button class="overlay-button" onclick="window.location.href='/camera'">Camera</button>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const mapboxAccessToken = '{{ mapbox_access_token }}';
+    mapboxgl.accessToken = mapboxAccessToken;
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [-1.5757, 54.7670], // Example: Durham, UK
+        zoom: 17,
+        interactive: false
+    });
+
+    const marker = new mapboxgl.Marker().setLngLat([0, 0]).addTo(map);
+    let gridData;
+    const gridSize = 0.001; // Grid size in degrees
+
+    function updatePosition(position) {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        marker.setLngLat([lon, lat]);
+
+        map.setCenter([lon, lat], { animate: false });
+
+        fetch('/save_location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat: lat, lon: lon })
+        }).then(() => {
+            fetchGridData(); // Refresh the grid data after saving a new location
         });
+    }
 
-        const marker = new mapboxgl.Marker().setLngLat([0, 0]).addTo(map);
-        let gridData;
-        const gridSize = 0.001; // Grid size in degrees
+    function showError(error) {
+        console.error("Error: ", error.message);
+    }
 
-        function updatePosition(position) {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            marker.setLngLat([lon, lat]);
+    function updateExploredCells() {
+        if (!gridData || !gridData.features) return;
 
-            map.setCenter([lon, lat], { animate: false });
+        gridData.features.forEach(feature => {
+            map.setFeatureState(
+                { source: 'grid', id: feature.id },
+                { explored: feature.properties.explored }
+            );
+        });
+    }
 
-            fetch('/save_location', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lat: lat, lon: lon })
-            }).then(() => {
-                fetchGridData(); // Refresh the grid data after saving a new location
+    function fetchGridData() {
+        const bounds = map.getBounds();
+        const minLat = bounds.getSouth();
+        const maxLat = bounds.getNorth();
+        const minLon = bounds.getWest();
+        const maxLon = bounds.getEast();
+
+        const gridSize = 0.001;
+
+        fetch(`/get_grid?min_lat=${minLat}&max_lat=${maxLat}&min_lon=${minLon}&max_lon=${maxLon}&grid_size=${gridSize}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Received grid data:', data);  // Log the received data
+                gridData = data;
+                if (gridData && gridData.features) {
+                    gridData.features.forEach((feature, index) => {
+                        feature.id = index;
+                    });
+                    updateGrid();
+                    updateExploredCells();
+                } else {
+                    console.error('Invalid grid data received');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching grid data:', error);
+            });
+    }
+
+    function updateGrid() {
+        if (map.getSource('grid')) {
+            map.getSource('grid').setData(gridData);
+        } else {
+            map.addSource('grid', {
+                'type': 'geojson',
+                'data': gridData
+            });
+
+            map.addLayer({
+                'id': 'grid',
+                'type': 'fill',
+                'source': 'grid',
+                'layout': {},
+                'paint': {
+                    'fill-color': [
+                        'case',
+                        ['boolean', ['feature-state', 'explored'], false],
+                        'rgba(0, 255, 0, 0.0001)',  // Green for explored
+                        'rgba(128, 128, 128, 0.5)'  // Grey for unexplored
+                    ]
+                }
+            });
+
+            map.addLayer({
+                'id': 'grid-outline',
+                'type': 'line',
+                'source': 'grid',
+                'layout': {},
+                'paint': {
+                    'line-color': '#000000',
+                    'line-width': 0
+                }
             });
         }
+    }
 
-        function showError(error) {
-            console.error("Error: ", error.message);
-        }
+    map.on('load', () => {
+        fetchGridData();
 
-        function updateExploredCells() {
-            if (!gridData || !gridData.features) return;
-
-            gridData.features.forEach(feature => {
-                map.setFeatureState(
-                    { source: 'grid', id: feature.id },
-                    { explored: feature.properties.explored }
-                );
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(updatePosition, showError, {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 5000
             });
+        } else {
+            alert("Geolocation is not supported by this browser.");
         }
+    });
 
-        function fetchGridData() {
-            const bounds = map.getBounds();
-            const minLat = bounds.getSouth();
-            const maxLat = bounds.getNorth();
-            const minLon = bounds.getWest();
-            const maxLon = bounds.getEast();
-
-            const gridSize = 0.001;
-
-            fetch(`/get_grid?min_lat=${minLat}&max_lat=${maxLat}&min_lon=${minLon}&max_lon=${maxLon}&grid_size=${gridSize}`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Received grid data:', data);  // Log the received data
-                    gridData = data;
-                    if (gridData && gridData.features) {
-                        gridData.features.forEach((feature, index) => {
-                            feature.id = index;
-                        });
-                        updateGrid();
-                        updateExploredCells();
-                    } else {
-                        console.error('Invalid grid data received');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching grid data:', error);
-                });
-        }
-
-        function updateGrid() {
-            if (map.getSource('grid')) {
-                map.getSource('grid').setData(gridData);
-            } else {
-                map.addSource('grid', {
-                    'type': 'geojson',
-                    'data': gridData
-                });
-
-                map.addLayer({
-                    'id': 'grid',
-                    'type': 'fill',
-                    'source': 'grid',
-                    'layout': {},
-                    'paint': {
-                        'fill-color': [
-                            'case',
-                            ['boolean', ['feature-state', 'explored'], false],
-                            'rgba(0, 255, 0, 0.0001)',  // Green for explored
-                            'rgba(128, 128, 128, 0.5)'  // Grey for unexplored
-                        ]
-                    }
-                });
-
-                map.addLayer({
-                    'id': 'grid-outline',
-                    'type': 'line',
-                    'source': 'grid',
-                    'layout': {},
-                    'paint': {
-                        'line-color': '#000000',
-                        'line-width': 0
-                    }
-                });
-            }
-        }
-
-        map.on('load', () => {
-            fetchGridData();
-
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(updatePosition, showError, {
-                    enableHighAccuracy: true,
-                    maximumAge: 0,
-                    timeout: 5000
-                });
-            } else {
-                alert("Geolocation is not supported by this browser.");
-            }
-        });
-
-        map.on('moveend', fetchGridData);
-
-    </script>
-</body>
-</html>
+    map.on('moveend', fetchGridData);
+</script>
+{% endblock %}
