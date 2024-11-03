@@ -7,6 +7,8 @@ from PIL import Image
 import io
 import math
 
+from torchvision import transforms
+
 # Add the classifiers directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'NN'))
 
@@ -21,6 +23,10 @@ travelled_locations = []
 @app.route('/')
 def index():
     return render_template('index.html', mapbox_access_token=app.config['MAPBOX_ACCESS_TOKEN'])
+
+@app.route('/camera')
+def camera():
+    return render_template('camera.html')
 
 @app.route('/save_location', methods=['POST'])
 def save_location():
@@ -62,6 +68,7 @@ def get_grid():
 
 @app.route('/classify_image', methods=['POST'])
 def classify_image():
+    
     data = request.get_json()
     if 'image' not in data:
         return jsonify({"error": "No image data"}), 400
@@ -69,13 +76,19 @@ def classify_image():
     base64_image = data['image']
 
     try:
+
         # Decode the base64 image
         image_data = base64.b64decode(base64_image)
         image = Image.open(io.BytesIO(image_data))
 
+        if image.mode == 'RGBA':
+            image = image.convert('RGB')
+
         # Save temp file
         temp_file_path = 'temp.jpg'
         image.save(temp_file_path)
+
+        image.show()
 
         # Classify the image
         classifier = AnimalClassifier()
@@ -83,7 +96,6 @@ def classify_image():
        
         # Optionally, delete the temporary file after processing
         os.remove(temp_file_path)
-        
 
         return jsonify({"animal": animal, "species": species})
 
