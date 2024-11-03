@@ -31,7 +31,7 @@ def camera():
 
 @app.route('/animals')
 def animals():
-    return render_template('animals.html', page='animals')
+    return render_template('animalList.html', page='animals')
 
 @app.route('/save_location', methods=['POST'])
 def save_location():
