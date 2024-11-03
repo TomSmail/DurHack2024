@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Page</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Search Animals</h1>
+        <!-- Home button with an arrow icon to navigate back -->
+        <button id="homeButton" class="home-button">
+            <span class="arrow">&larr;</span> Home
+        </button>
+    </header>
+
+    <main>
+        <!-- Search bar placed above the animal cards -->
+        <input type="text" id="searchInput" placeholder="Search for an animal..." oninput="filterAnimals()">
+
+        <div class="card-container" id="animalCards">
+            <!-- Animal cards will be dynamically inserted here -->
+        </div>
+    </main>
+
+    <script>
+        // Placeholder animal data
+        const animals = [
+            { name: 'Elephant', image: 'elephant.jpg' },
+            { name: 'Tiger', image: 'tiger.jpg' },
+            { name: 'Penguin', image: 'penguin.jpg' },
+            { name: 'Panda', image: 'panda.jpg' },
+            { name: 'Giraffe', image: 'giraffe.jpg' }
+        ];
+
+        // Function to display animal cards
+        function displayAnimals(filteredAnimals) {
+            const container = document.getElementById('animalCards');
+            container.innerHTML = ''; // Clear previous content
+
+            filteredAnimals.forEach(animal => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+
+                const image = document.createElement('img');
+                image.src = animal.image; // Path to the animal image
+                image.alt = animal.name;
+                image.classList.add('animal-photo');
+
+                const name = document.createElement('p');
+                name.textContent = animal.name;
+
+                card.appendChild(image);
+                card.appendChild(name);
+                container.appendChild(card);
+            });
+        }
+
+        // Function to filter animals based on search input
+        function filterAnimals() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filteredAnimals = animals.filter(animal =>
+                animal.name.toLowerCase().includes(query)
+            );
+            displayAnimals(filteredAnimals);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            displayAnimals(animals); // Show all animals on initial load
+            document.getElementById('homeButton').addEventListener('click', () => {
+                window.location.href = 'index.html'; // Adjust this link to your home page
+            });
+        });
+    </script>
+</body>
+</html>

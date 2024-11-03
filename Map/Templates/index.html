@@ -9,11 +9,28 @@
     <style>
         #map { height: 100%; width: 100%; position: absolute; }
         #debug { margin-top: 20px; }
+        .overlay-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1; /* Ensure the button is on top of the map */
+        }
+        .overlay-button:hover {
+            background-color: #0056b3;
+        }
     </style>
+
 </head>
 <body>
     <div id="map"></div>
     <div id="debug"></div>
+    <button class="overlay-button" onclick="window.location.href='/camera'">Camera</button>
     <script>
         const mapboxAccessToken = '{{ mapbox_access_token }}';
         mapboxgl.accessToken = mapboxAccessToken;

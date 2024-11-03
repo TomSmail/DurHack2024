@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Page</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Camera Access</h1>
+        <button id="homeButton" class="home-button">
+            <span class="arrow-left">&#8592;</span> Home
+        </button>
+    </header>
+    
+    <main>
+        <div class="camera-container">
+            <video id="cameraStream" autoplay></video>
+            <canvas id="photoCanvas" style="display: none;"></canvas>
+            <img id="capturedPhoto" alt="Captured Photo" style="display: none;">
+        </div>
+
+        <div class="button-container">
+            <button id="flipCameraButton" class="green-button">Flip Camera</button>
+            <button id="takePhotoButton" class="green-button">Take Photo</button>
+            <button id="newPhotoButton" class="green-button" style="display: none;">New Picture</button>
+        </div>
+    </main>
+
+    <script>
+        let stream;
+        let isFrontCamera = true;
+
+        // Function to start or restart the camera
+        async function startCamera() {
+            if (stream) {
+                // Stop all active tracks before switching
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: isFrontCamera ? "user" : "environment"
+                    }
+                });
+                const video = document.getElementById('cameraStream');
+                video.srcObject = stream;
+                video.style.display = 'block'; // Show the video
+                document.getElementById('capturedPhoto').style.display = 'none'; // Hide the captured photo
+                document.getElementById('newPhotoButton').style.display = 'none'; // Hide the "New Picture" button
+                document.getElementById('takePhotoButton').style.display = 'inline'; // Show the "Take Photo" button
+                document.getElementById('flipCameraButton').style.display = 'inline'; // Show the "Flip Camera" button
+            } catch (error) {
+                alert("Camera access failed: " + error.message);
+            }
+        }
+
+        // Function to flip the camera
+        function flipCamera() {
+            isFrontCamera = !isFrontCamera;
+            startCamera();
+        }
+
+        // Function to take a photo
+        function takePhoto() {
+            const video = document.getElementById('cameraStream');
+            const canvas = document.getElementById('photoCanvas');
+            const photo = document.getElementById('capturedPhoto');
+
+            // Set canvas size to match video stream
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw the current frame from the video onto the canvas
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert the canvas to a data URL and display the photo
+            const dataUrl = canvas.toDataURL('image/png');
+            photo.src = dataUrl;
+            photo.style.display = 'block'; // Show the captured photo
+            video.style.display = 'none'; // Hide the live video stream
+            document.getElementById('takePhotoButton').style.display = 'none'; // Hide the "Take Photo" button
+            document.getElementById('flipCameraButton').style.display = 'none'; // Hide the "Flip Camera" button
+            document.getElementById('newPhotoButton').style.display = 'inline'; // Show the "New Picture" button
+            
+            // Send the photo to the server
+            sendPhoto(dataUrl);
+        }
+
+        // Function to send the photo to the server
+        function sendPhoto(dataUrl) {
+
+            // Extract the base64 part from the data URL
+            const base64String = dataUrl.split(',')[1];
+
+            fetch('/classify_image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image: base64String })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+
+        // Event listener to reset the view and start the camera again
+        document.getElementById('newPhotoButton').addEventListener('click', startCamera);
+
+        // Initialize the camera on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            startCamera();
+            document.getElementById('flipCameraButton').addEventListener('click', flipCamera);
+            document.getElementById('takePhotoButton').addEventListener('click', takePhoto);
+            document.getElementById('homeButton').addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+
